@@ -1,0 +1,421 @@
+// SEVERINA PLUS - OWNER DASHBOARD
+// Google Apps Script Backend
+
+const SHEET_ID = '1RyMQ_73Gm9ub6EccABapzn9JgDra_79LZCX6ko_2KbU';
+const SHEET_NAME = 'ORDERING_SHEET';
+const COMMISSION_PER_ORDER = 2; // GHS 2 per order
+
+// Main function to serve the dashboard
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('owner_dashboard')
+    .setTitle('Severina Plus - Owner Dashboard')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// Get all dashboard data
+function getDashboardData(period = 'today') {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const rows = data.slice(1);
+  
+  // Get column indices
+  const cols = {
+    orderId: headers.indexOf('ORDER_ID'),
+    phone: headers.indexOf('PHONE'),
+    customerName: headers.indexOf('CUSTOMER_NAME'),
+    items: headers.indexOf('ITEMS'),
+    quantity: headers.indexOf('QUANTITY'),
+    amount: headers.indexOf('AMOUNT'),
+    deliveryOption: headers.indexOf('DELIVERY_OPTION'),
+    date: headers.indexOf('DATE'),
+    time: headers.indexOf('TIME'),
+    notes: headers.indexOf('NOTES'),
+    status: headers.indexOf('STATUS'),
+    paymentMethod: headers.indexOf('PAYMENT_METHOD'),
+    paymentStatus: headers.indexOf('PAYMENT_STATUS'),
+    acceptedBy: headers.indexOf('ACCEPTED_BY'),
+    acceptedAt: headers.indexOf('ACCEPTED_AT'),
+    readyAt: headers.indexOf('READY_AT')
+  };
+  
+  // Filter orders by period
+  const filteredOrders = filterOrdersByPeriod(rows, cols, period);
+  
+  // Calculate all metrics
+  const metrics = {
+    revenue: calculateRevenue(filteredOrders, cols),
+    orders: calculateOrderCount(filteredOrders, cols),
+    commission: calculateCommission(filteredOrders, cols),
+    paymentBreakdown: calculatePaymentBreakdown(filteredOrders, cols),
+    staffPerformance: calculateStaffPerformance(filteredOrders, cols),
+    peakHours: calculatePeakHours(filteredOrders, cols),
+    popularItems: calculatePopularItems(filteredOrders, cols),
+    deliveryVsPickup: calculateDeliveryVsPickup(filteredOrders, cols),
+    cancellations: calculateCancellations(filteredOrders, cols),
+    repeatCustomers: calculateRepeatCustomers(filteredOrders, cols),
+    liveStatus: calculateLiveStatus(rows, cols),
+    customerLeaderboard: calculateCustomerLeaderboard(rows, cols, period),
+    period: period,
+    lastUpdated: new Date().toLocaleTimeString('en-GB')
+  };
+  
+  return metrics;
+}
+
+// Filter orders by time period
+function filterOrdersByPeriod(rows, cols, period) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  return rows.filter(row => {
+    const orderDate = parseDate(row[cols.date]);
+    if (!orderDate) return false;
+    
+    switch(period) {
+      case 'today':
+        return orderDate >= today;
+      
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return orderDate >= yesterday && orderDate < today;
+      
+      case 'week':
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return orderDate >= weekAgo;
+      
+      case 'month':
+        const monthAgo = new Date(today);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        return orderDate >= monthAgo;
+      
+      case 'semester':
+        // Assuming semester starts Aug 1
+        const semesterStart = new Date(now.getFullYear(), 7, 1); // Aug 1
+        return orderDate >= semesterStart;
+      
+      default:
+        return true;
+    }
+  });
+}
+
+// Parse date from various formats
+function parseDate(dateStr) {
+  if (!dateStr) return null;
+  
+  // Try different date formats
+  const formats = [
+    /(\d{4})-(\d{2})-(\d{2})/, // YYYY-MM-DD
+    /(\d{2})\/(\d{2})\/(\d{4})/, // DD/MM/YYYY
+  ];
+  
+  for (const format of formats) {
+    const match = String(dateStr).match(format);
+    if (match) {
+      if (format === formats[0]) {
+        return new Date(match[1], match[2] - 1, match[3]);
+      } else {
+        return new Date(match[3], match[2] - 1, match[1]);
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Calculate total revenue
+function calculateRevenue(orders, cols) {
+  return orders.reduce((sum, row) => {
+    const amount = parseFloat(row[cols.amount]) || 0;
+    const status = row[cols.status];
+    // Only count completed orders
+    if (status !== 'Cancelled') {
+      return sum + amount;
+    }
+    return sum;
+  }, 0);
+}
+
+// Calculate order count
+function calculateOrderCount(orders, cols) {
+  return orders.filter(row => row[cols.status] !== 'Cancelled').length;
+}
+
+// Calculate commission
+function calculateCommission(orders, cols) {
+  const validOrders = orders.filter(row => row[cols.status] !== 'Cancelled');
+  return validOrders.length * COMMISSION_PER_ORDER;
+}
+
+// Payment breakdown (Cash vs Online)
+function calculatePaymentBreakdown(orders, cols) {
+  const validOrders = orders.filter(row => row[cols.status] !== 'Cancelled');
+  const cash = validOrders.filter(row => row[cols.paymentMethod] === 'Cash').length;
+  const online = validOrders.filter(row => row[cols.paymentMethod] === 'Online').length;
+  const total = validOrders.length;
+  
+  return {
+    cash: cash,
+    cashPercent: total > 0 ? Math.round((cash / total) * 100) : 0,
+    online: online,
+    onlinePercent: total > 0 ? Math.round((online / total) * 100) : 0
+  };
+}
+
+// Staff performance (orders and speed)
+function calculateStaffPerformance(orders, cols) {
+  const staffMap = {};
+  
+  orders.forEach(row => {
+    const staff = row[cols.acceptedBy];
+    const status = row[cols.status];
+    
+    if (!staff || status === 'Cancelled') return;
+    
+    if (!staffMap[staff]) {
+      staffMap[staff] = {
+        name: staff,
+        orders: 0,
+        totalTime: 0,
+        count: 0
+      };
+    }
+    
+    staffMap[staff].orders++;
+    
+    // Calculate prep time if ready
+    if (row[cols.acceptedAt] && row[cols.readyAt]) {
+      const accepted = parseTime(row[cols.acceptedAt]);
+      const ready = parseTime(row[cols.readyAt]);
+      
+      if (accepted && ready) {
+        const prepTime = (ready - accepted) / 60000; // minutes
+        if (prepTime > 0 && prepTime < 120) { // sanity check
+          staffMap[staff].totalTime += prepTime;
+          staffMap[staff].count++;
+        }
+      }
+    }
+  });
+  
+  // Convert to array and calculate averages
+  const staffArray = Object.values(staffMap).map(staff => ({
+    name: staff.name,
+    orders: staff.orders,
+    avgTime: staff.count > 0 ? Math.round(staff.totalTime / staff.count) : 0
+  }));
+  
+  // Sort by orders descending
+  staffArray.sort((a, b) => b.orders - a.orders);
+  
+  return staffArray;
+}
+
+// Parse time string
+function parseTime(timeStr) {
+  if (!timeStr) return null;
+  
+  try {
+    const parts = String(timeStr).split(':');
+    if (parts.length >= 2) {
+      const hours = parseInt(parts[0]);
+      const minutes = parseInt(parts[1]);
+      const seconds = parts[2] ? parseInt(parts[2]) : 0;
+      
+      const date = new Date();
+      date.setHours(hours, minutes, seconds, 0);
+      return date;
+    }
+  } catch (e) {
+    return null;
+  }
+  
+  return null;
+}
+
+// Peak hours analysis
+function calculatePeakHours(orders, cols) {
+  const hourMap = {};
+  
+  orders.forEach(row => {
+    if (row[cols.status] === 'Cancelled') return;
+    
+    const timeStr = row[cols.time];
+    if (!timeStr) return;
+    
+    const hour = parseInt(String(timeStr).split(':')[0]);
+    if (isNaN(hour)) return;
+    
+    if (!hourMap[hour]) {
+      hourMap[hour] = 0;
+    }
+    hourMap[hour]++;
+  });
+  
+  // Convert to array and sort by hour
+  const hoursArray = Object.keys(hourMap).map(hour => ({
+    hour: parseInt(hour),
+    orders: hourMap[hour],
+    label: formatHour(parseInt(hour))
+  })).sort((a, b) => a.hour - b.hour);
+  
+  return hoursArray;
+}
+
+// Format hour for display
+function formatHour(hour) {
+  if (hour === 0) return '12 AM';
+  if (hour < 12) return hour + ' AM';
+  if (hour === 12) return '12 PM';
+  return (hour - 12) + ' PM';
+}
+
+// Popular items analysis
+function calculatePopularItems(orders, cols) {
+  const itemMap = {};
+  
+  orders.forEach(row => {
+    if (row[cols.status] === 'Cancelled') return;
+    
+    const items = row[cols.items];
+    if (!items) return;
+    
+    // Parse items (format: "2x Jollof and Chicken (Medium), 1x Plantain")
+    const itemList = String(items).split(',');
+    
+    itemList.forEach(item => {
+      // Extract item name (remove quantity and portion size)
+      let cleanItem = item.trim();
+      cleanItem = cleanItem.replace(/^\d+x\s*/i, ''); // Remove "2x "
+      cleanItem = cleanItem.replace(/\s*\(.*?\)\s*/g, ''); // Remove "(Medium)"
+      cleanItem = cleanItem.trim();
+      
+      if (!itemMap[cleanItem]) {
+        itemMap[cleanItem] = 0;
+      }
+      
+      // Extract quantity
+      const qtyMatch = item.match(/^(\d+)x/i);
+      const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+      
+      itemMap[cleanItem] += qty;
+    });
+  });
+  
+  // Convert to array and sort
+  const itemsArray = Object.keys(itemMap).map(item => ({
+    name: item,
+    count: itemMap[item]
+  })).sort((a, b) => b.count - a.count);
+  
+  // Return top 5
+  return itemsArray.slice(0, 5);
+}
+
+// Delivery vs Pickup ratio
+function calculateDeliveryVsPickup(orders, cols) {
+  const validOrders = orders.filter(row => row[cols.status] !== 'Cancelled');
+  const delivery = validOrders.filter(row => row[cols.deliveryOption] === 'Delivery').length;
+  const pickup = validOrders.filter(row => row[cols.deliveryOption] === 'Pickup').length;
+  const total = validOrders.length;
+  
+  return {
+    delivery: delivery,
+    deliveryPercent: total > 0 ? Math.round((delivery / total) * 100) : 0,
+    pickup: pickup,
+    pickupPercent: total > 0 ? Math.round((pickup / total) * 100) : 0
+  };
+}
+
+// Cancellations analysis
+function calculateCancellations(orders, cols) {
+  const cancelled = orders.filter(row => row[cols.status] === 'Cancelled').length;
+  const total = orders.length;
+  
+  return {
+    count: cancelled,
+    percent: total > 0 ? Math.round((cancelled / total) * 100) : 0
+  };
+}
+
+// Repeat customers analysis
+function calculateRepeatCustomers(orders, cols) {
+  const phoneMap = {};
+  
+  orders.forEach(row => {
+    if (row[cols.status] === 'Cancelled') return;
+    
+    const phone = row[cols.phone];
+    if (!phone) return;
+    
+    if (!phoneMap[phone]) {
+      phoneMap[phone] = 0;
+    }
+    phoneMap[phone]++;
+  });
+  
+  const repeatCustomers = Object.values(phoneMap).filter(count => count > 1).length;
+  const totalCustomers = Object.keys(phoneMap).length;
+  
+  return {
+    count: repeatCustomers,
+    percent: totalCustomers > 0 ? Math.round((repeatCustomers / totalCustomers) * 100) : 0
+  };
+}
+
+// Live order status
+function calculateLiveStatus(rows, cols) {
+  const pending = rows.filter(row => row[cols.status] === 'Pending').length;
+  const inProgress = rows.filter(row => row[cols.status] === 'In Progress').length;
+  const ready = rows.filter(row => row[cols.status] === 'Ready').length;
+  
+  return {
+    pending: pending,
+    cooking: inProgress,
+    ready: ready
+  };
+}
+
+// Customer leaderboard (for loyalty rewards)
+function calculateCustomerLeaderboard(rows, cols, period) {
+  const customerMap = {};
+  
+  // Filter by period
+  const filteredOrders = filterOrdersByPeriod(rows, cols, period);
+  
+  filteredOrders.forEach(row => {
+    if (row[cols.status] === 'Cancelled') return;
+    
+    const phone = row[cols.phone];
+    const name = row[cols.customerName] || 'Customer';
+    const amount = parseFloat(row[cols.amount]) || 0;
+    
+    if (!phone) return;
+    
+    if (!customerMap[phone]) {
+      customerMap[phone] = {
+        phone: phone,
+        name: name,
+        orders: 0,
+        totalSpent: 0
+      };
+    }
+    
+    customerMap[phone].orders++;
+    customerMap[phone].totalSpent += amount;
+    
+    // Update name if we get a non-empty one
+    if (name && name !== 'Customer') {
+      customerMap[phone].name = name;
+    }
+  });
+  
+  // Convert to array and sort by orders
+  const customersArray = Object.values(customerMap).sort((a, b) => b.orders - a.orders);
+  
+  // Return top 10
+  return customersArray.slice(0, 10);
+}
