@@ -25,3 +25,9 @@ if __name__ == '__main__':
     print("--- TABLET BRIDGE ACTIVE ---")
     app.run(host='0.0.0.0', port=5555)
 EOF
+
+
+
+
+tunnel starting 
+ssh -p 443 -R0:localhost:5555 qr@a.pinggy.io
