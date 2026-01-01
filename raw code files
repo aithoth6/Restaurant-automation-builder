@@ -1,0 +1,27 @@
+cat <<EOF > kitchen_bridge.py
+from flask import Flask, request, jsonify
+import socket
+
+app = Flask(__name__)
+
+@app.route('/print', methods=['POST'])
+def print_order():
+    data = request.get_json()
+    if not data or 'text' not in data:
+        return jsonify({"status": "error"}), 400
+    
+    order_text = data['text']
+    
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(5)
+            s.connect(('127.0.0.1', 9100))
+            s.sendall(order_text.encode('utf-8'))
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+if __name__ == '__main__':
+    print("--- TABLET BRIDGE ACTIVE ---")
+    app.run(host='0.0.0.0', port=5555)
+EOF
