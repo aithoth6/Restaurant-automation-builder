@@ -1,19 +1,21 @@
 #!/bin/bash
 
-# --- CONFIGURATION ---
-PORT=5555
-# If you get Pinggy Pro, replace 'qr@a.pinggy.io' with your 'token+qr@pro.pinggy.io'
-PINGGY_COMMAND="ssh -p 443 -o ServerAliveInterval=30 -R0:localhost:$PORT qr@a.pinggy.io"
+# This script looks for a file named 'pinggy_token' on the tablet.
+# If it doesn't find it, it defaults to the Free version.
 
-echo "------------------------------------------------"
-echo "  STARTING PINGGY TUNNEL (Auto-Restart Enabled) "
-echo "  Local Port: $PORT                             "
-echo "------------------------------------------------"
+TOKEN_FILE="pinggy_token"
 
-# This loop restarts the tunnel automatically if it drops
+if [ -f "$TOKEN_FILE" ]; then
+    TOKEN=$(cat $TOKEN_FILE)
+    echo "Using Paid Token from $TOKEN_FILE..."
+    PINGGY_COMMAND="ssh -p 443 -o ServerAliveInterval=30 -R0:localhost:5555 ${TOKEN}+qr@pro.pinggy.io"
+else
+    echo "No token found. Starting FREE version..."
+    PINGGY_COMMAND="ssh -p 443 -o ServerAliveInterval=30 -R0:localhost:5555 qr@a.pinggy.io"
+fi
+
 while true; do
-    echo "Connecting to Pinggy..."
     $PINGGY_COMMAND
-    echo "Tunnel connection lost. Restarting in 5 seconds..."
+    echo "Tunnel lost. Reconnecting in 5 seconds..."
     sleep 5
 done
