@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Severina Kitchen</title>
+<style>
+.order-customer {
+    font-size: 16px;
+    color: #555;
+    margin: 5px 0;
+    font-weight: 500;
+}
+
+.order-phone {
+    font-size: 14px;
+    color: #666;
+    margin: 5px 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f5f5f5;
+}
+
+.header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.header h1 {
+    font-size: 28px;
+    margin: 0;
+    font-weight: bold;
+}
+
+.controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.sound-btn, .staff-select {
+    padding: 10px 15px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: white;
+    color: #333;
+}
+
+.sound-btn {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 2px solid white;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.column {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    max-height: calc(100vh - 150px);
+    overflow-y: auto;
+}
+
+.column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+}
+
+.column-header.pending {
+    border-bottom-color: #ef4444;
+}
+
+.column-header.cooking {
+    border-bottom-color: #f59e0b;
+}
+
+.column-title {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.pending-title {
+    color: #ef4444;
+}
+
+.cooking-title {
+    color: #f59e0b;
+}
+
+.badge {
+    background: #ef4444;
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 18px;
+    font-weight: bold;
+    min-width: 40px;
+    text-align: center;
+}
+
+.badge.cooking {
+    background: #f59e0b;
+}
+
+.order-card {
+    border: 3px solid;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    transition: all 0.3s;
+}
+
+.order-card.pending {
+    border-color: #ef4444;
+    background: #fef2f2;
+}
+
+.order-card.cooking {
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.order-number {
+    font-size: 28px;
+    font-weight: bold;
+    color: #1f2937;
+    margin-bottom: 8px;
+}
+
+.order-time {
+    font-size: 18px;
+    color: #6b7280;
+    margin-bottom: 10px;
+}
+
+.order-items {
+    font-size: 18px;
+    margin: 10px 0;
+    line-height: 1.5;
+    color: #1f2937;
+}
+
+.order-info {
+    display: flex;
+    gap: 15px;
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.staff-info {
+    font-size: 16px;
+    color: #6b7280;
+    margin: 10px 0;
+    padding: 8px;
+    background: white;
+    border-radius: 8px;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 18px;
+    font-size: 24px;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 10px;
+    color: white;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.start-btn {
+    background: #10b981;
+}
+
+.start-btn:hover {
+    background: #059669;
+    transform: scale(1.02);
+}
+
+.done-btn {
+    background: #3b82f6;
+}
+
+.done-btn:hover {
+    background: #2563eb;
+    transform: scale(1.02);
+}
+
+.action-btn:active {
+    transform: scale(0.98);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 40px;
+    border-radius: 15px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+.modal-icon {
+    font-size: 60px;
+    margin-bottom: 20px;
+}
+
+.modal-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.modal-info {
+    font-size: 18px;
+    color: #6b7280;
+    margin-bottom: 25px;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 15px;
+}
+
+.modal-btn {
+    flex: 1;
+    padding: 15px;
+    font-size: 20px;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.yes-btn {
+    background: #10b981;
+}
+
+.yes-btn:hover {
+    background: #059669;
+}
+
+.no-btn {
+    background: #ef4444;
+}
+
+.no-btn:hover {
+    background: #dc2626;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #9ca3af;
+}
+
+.empty-icon {
+    font-size: 64px;
+    margin-bottom: 15px;
+}
+
+.empty-text {
+    font-size: 20px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        grid-template-columns: 1fr;
+    }
+    .header h1 {
+        font-size: 20px;
+    }
+}
+.updated-badge {
+    background: #f59e0b;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    margin: 8px 0;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>🍽️ SEVERIN PLUS KITCHEN</h1>
+    <div class="controls">
+        <button class="sound-btn" id="soundBtn" onclick="toggleSound()">🔊 ON</button>
+        <select class="staff-select" id="staffSelect">
+            <option value="">👤 Select Staff</option>
+            <option value="Eliklim">Eliklim</option>
+            <option value="Nii">Nii</option>
+            <option value="Norah">Norah</option>
+            <option value="Mansah">Mansah</option>
+            <option value="Mawusi">Mawusi</option>
+            <option value="Portia">Portia</option>
+            <option value="Tsoekem">Tsoekem</option>
+            <option value="Bridget">Bridget</option>
+            <option value="Setornam">Setornam</option>
+        </select>
+    </div>
+</div>
+
+<div class="container">
+    <div class="column">
+        <div class="column-header pending">
+            <div class="column-title pending-title">🔴 PENDING</div>
+            <div class="badge" id="pendingCount">0</div>
+        </div>
+        <div id="pendingOrders">
+            <div class="empty-state">
+                <div class="empty-icon">⏳</div>
+                <div class="empty-text">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="column">
+        <div class="column-header cooking">
+            <div class="column-title cooking-title">🟡 COOKING</div>
+            <div class="badge cooking" id="cookingCount">0</div>
+        </div>
+        <div id="cookingOrders">
+            <div class="empty-state">
+                <div class="empty-icon">⏳</div>
+                <div class="empty-text">Loading...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="confirmModal">
+    <div class="modal-content">
+        <div class="modal-icon">❓</div>
+        <div class="modal-title">Is this order DONE?</div>
+        <div class="modal-info" id="modalInfo"></div>
+        <div class="modal-buttons">
+            <button class="modal-btn yes-btn" onclick="confirmReady(true)">
+                <span style="font-size: 40px;">✅</span>
+                <span>YES</span>
+            </button>
+            <button class="modal-btn no-btn" onclick="confirmReady(false)">
+                <span style="font-size: 40px;">❌</span>
+                <span>NO</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzO1yMM2F4FpM7RJXGvv3Lj4mvy30fVwnho4I6bQSwWH_N0sjkU1KcNfRIOcdTjyjfC/exec';
+const REFRESH_INTERVAL = 5000;
+let soundEnabled = true;
+let currentOrders = {pending: [], cooking: []};
+let pendingOrderId = null;
+
+// NEW: Track alert cycles for each order
+let alertCycles = {}; // {orderId: {audio: AudioObject, loopTimer: timeout, waitTimer: timeout, isRinging: bool}}
+let knownOrderIds = new Set(); // Track which orders we've seen before
+
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('soundBtn');
+    btn.textContent = soundEnabled ? '🔊 ON' : '🔇 OFF';
+    
+    // If sound disabled, stop all active alerts
+    if (!soundEnabled) {
+        Object.keys(alertCycles).forEach(orderId => stopAlertCycle(orderId));
+    }
+}
+
+async function loadOrders() {
+    try {
+        const response = await fetch(SCRIPT_URL + '?action=getOrders');
+        const data = await response.json();
+        currentOrders = data;
+        renderOrders();
+    } catch (error) {
+        console.error('Error loading orders:', error);
+    }
+}
+
+function renderOrders() {
+    renderPending();
+    renderCooking();
+}
+
+function renderPending() {
+    const container = document.getElementById('pendingOrders');
+    const orders = currentOrders.pending || [];
+    
+    document.getElementById('pendingCount').textContent = orders.length;
+
+    // DETECT NEW ORDERS (orders we haven't seen before)
+    if (soundEnabled) {
+        orders.forEach(order => {
+            const orderId = order.orderId;
+            
+            // If this is a NEW order (not in knownOrderIds)
+            if (!knownOrderIds.has(orderId)) {
+                console.log('🆕 New order detected:', orderId);
+                knownOrderIds.add(orderId);
+                startAlertCycle(orderId);
+            }
+        });
+    }
+    
+    // CLEAN UP: Remove alert cycles for orders no longer pending
+    const currentPendingIds = orders.map(o => o.orderId);
+    Object.keys(alertCycles).forEach(orderId => {
+        if (!currentPendingIds.includes(orderId)) {
+            console.log('✅ Order accepted/removed:', orderId);
+            stopAlertCycle(orderId);
+            knownOrderIds.delete(orderId); // Remove from known orders
+        }
+    });
+
+    if (orders.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">No pending orders</div></div>';
+        return;
+    }
+
+    container.innerHTML = orders.map(order => `
+        <div class="order-card pending">
+            <div class="order-number">#${order.orderId}</div>
+            <div class="order-time">⏰ ${order.time}</div>
+            ${order.customerName ? `<div class="order-customer">👤 ${order.customerName}</div>` : ''}
+            <div class="order-phone">📞 ${order.phone}</div>
+            <div class="order-items">${order.items}</div>
+            ${order.updated ? '<div class="updated-badge">⚠️ ORDER UPDATED</div>' : ''}
+            <div class="order-info">
+                <div class="info-item">
+                    <span>${order.deliveryOption === 'Pickup' ? '📍' : '🚗'}</span>
+                    <span>${order.deliveryOption}</span>
+                </div>
+                <div class="info-item">
+                    <span>💰</span>
+                    <span>GHS ${order.amount}</span>
+                </div>
+            </div>
+            <button class="action-btn start-btn" onclick="startOrder('${order.orderId}')">
+                <span style="font-size: 32px;">✅</span>
+                <span>START</span>
+            </button>
+        </div>
+    `).join('');
+}
+
+function renderCooking() {
+    const container = document.getElementById('cookingOrders');
+    const orders = currentOrders.cooking || [];
+    document.getElementById('cookingCount').textContent = orders.length;
+
+    if (orders.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🍳</div><div class="empty-text">No orders cooking</div></div>';
+        return;
+    }
+
+    container.innerHTML = orders.map(order => `
+        <div class="order-card cooking">
+            <div class="order-number">#${order.orderId}</div>
+            <div class="order-time">⏰ ${order.time}</div>
+            ${order.customerName ? `<div class="order-customer">👤 ${order.customerName}</div>` : ''}
+            <div class="order-phone">📞 ${order.phone}</div>
+            <div class="order-items">${order.items}</div>
+            <div class="order-info">
+                <div class="info-item">
+                    <span>${order.deliveryOption === 'Pickup' ? '📍' : '🚗'}</span>
+                    <span>${order.deliveryOption}</span>
+                </div>
+                <div class="info-item">
+                    <span>💰</span>
+                    <span>GHS ${order.amount}</span>
+                </div>
+            </div>
+            ${order.acceptedBy ? `<div class="staff-info">👤 ${order.acceptedBy}</div>` : ''}
+            <button class="action-btn done-btn" onclick="showConfirm('${order.orderId}')">
+                <span style="font-size: 32px;">✅</span>
+                <span>DONE?</span>
+            </button>
+        </div>
+    `).join('');
+}
+
+// NEW: Start alert cycle for a specific order
+function startAlertCycle(orderId) {
+    console.log(`🔊 Starting alert cycle for order ${orderId}`);
+    
+    // Stop any existing cycle for this order
+    if (alertCycles[orderId]) {
+        stopAlertCycle(orderId);
+    }
+    
+    // Initialize cycle object
+    alertCycles[orderId] = {
+        audio: null,
+        loopTimer: null,
+        waitTimer: null,
+        isRinging: false
+    };
+    
+    // Start first ring
+    ringFor30Seconds(orderId);
+}
+
+// NEW: Ring for 30 seconds
+function ringFor30Seconds(orderId) {
+    if (!soundEnabled || !alertCycles[orderId]) return;
+    
+    console.log(`🔔 Ringing for order ${orderId} (30 seconds)`);
+    
+    const cycle = alertCycles[orderId];
+    cycle.isRinging = true;
+    
+    // Create audio element that loops
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869.wav');
+    audio.loop = true;
+    cycle.audio = audio;
+    
+    // Play the looping sound
+    audio.play().catch(e => console.log('Sound blocked:', e));
+    
+    // Stop after 30 seconds and schedule next cycle
+    cycle.loopTimer = setTimeout(() => {
+        stopRinging(orderId);
+        waitFor1Minute(orderId);
+    }, 30000); // 30 seconds
+}
+
+// NEW: Stop ringing (but keep cycle alive)
+function stopRinging(orderId) {
+    if (!alertCycles[orderId]) return;
+    
+    console.log(`🔇 Stopping ring for order ${orderId}`);
+    
+    const cycle = alertCycles[orderId];
+    
+    if (cycle.audio) {
+        cycle.audio.pause();
+        cycle.audio.currentTime = 0;
+        cycle.audio = null;
+    }
+    
+    if (cycle.loopTimer) {
+        clearTimeout(cycle.loopTimer);
+        cycle.loopTimer = null;
+    }
+    
+    cycle.isRinging = false;
+}
+
+// NEW: Wait for 1 minute then ring again
+function waitFor1Minute(orderId) {
+    if (!soundEnabled || !alertCycles[orderId]) return;
+    
+    console.log(`⏸️ Waiting 1 minute for order ${orderId}`);
+    
+    const cycle = alertCycles[orderId];
+    
+    cycle.waitTimer = setTimeout(() => {
+        // Check if order is still pending
+        const stillPending = currentOrders.pending.some(o => o.orderId === orderId);
+        if (stillPending && soundEnabled) {
+            ringFor30Seconds(orderId); // Ring again
+        }
+    }, 60000); // 1 minute
+}
+
+// NEW: Stop alert cycle completely (order accepted)
+function stopAlertCycle(orderId) {
+    if (!alertCycles[orderId]) return;
+    
+    console.log(`✋ Stopping alert cycle for order ${orderId}`);
+    
+    const cycle = alertCycles[orderId];
+    
+    // Stop audio
+    if (cycle.audio) {
+        cycle.audio.pause();
+        cycle.audio.currentTime = 0;
+    }
+    
+    // Clear timers
+    if (cycle.loopTimer) clearTimeout(cycle.loopTimer);
+    if (cycle.waitTimer) clearTimeout(cycle.waitTimer);
+    
+    // Remove from tracking
+    delete alertCycles[orderId];
+}
+
+async function startOrder(orderId) {
+    const staff = document.getElementById('staffSelect').value;
+    if (!staff) {
+        alert('⚠️ Please select your name first!');
+        document.getElementById('staffSelect').focus();
+        return;
+    }
+
+    try {
+        // Stop alert immediately when accepting
+        stopAlertCycle(orderId);
+        
+        const response = await fetch(SCRIPT_URL + '?action=startCooking&orderId=' + orderId + '&staff=' + staff);
+        const result = await response.json();
+        if (result.success) {
+            loadOrders();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error starting order:', error);
+        alert('❌ Error! Please try again.');
+    }
+}
+
+function showConfirm(orderId) {
+    const order = currentOrders.cooking.find(o => o.orderId === orderId);
+    if (!order) return;
+
+    document.getElementById('modalInfo').innerHTML = `Order #${order.orderId}<br>${order.items}`;
+    document.getElementById('confirmModal').classList.add('show');
+    pendingOrderId = orderId;
+}
+
+async function confirmReady(confirmed) {
+    document.getElementById('confirmModal').classList.remove('show');
+    if (!confirmed) return;
+
+    try {
+        const response = await fetch(SCRIPT_URL + '?action=markReady&orderId=' + pendingOrderId);
+        const result = await response.json();
+        if (result.success) {
+            loadOrders();
+            pendingOrderId = null;
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error marking ready:', error);
+        alert('❌ Error! Please try again.');
+    }
+}
+
+window.onload = function() {
+    loadOrders();
+    setInterval(loadOrders, REFRESH_INTERVAL);
+};
+</script>
+</body>
+</html>
