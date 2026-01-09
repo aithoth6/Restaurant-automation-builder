@@ -74,3 +74,11 @@ If you buy Pinggy Pro, do NOT put the token on GitHub. Instead, run this command
 Bash
 
 echo "YOUR_SECRET_TOKEN_HERE" > pinggy_token
+
+
+F-DROID
+termux emulator download and termux api download.
+run pkg install termux-api -y
+run termux-setup-storage
+run termux-wake-lock
+run pkg update && pkg upgrade -y && pkg install python git nano openssh termux-api -y && pip install flask
