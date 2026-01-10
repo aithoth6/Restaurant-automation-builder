@@ -92,4 +92,9 @@ opening one hidden file to store token nano .bashrc
 store your file export PINGGY_TOKEN="PASTE_YOUR_ACTUAL_TOKEN_HERE"
 refresh source .bashrc
 confirm echo $PINGGY_TOKEN
+now enter the main folder cd restaurant-automation-builder
+subfolder cd "PRINTING SETUP"
+nano setup_tunnel.sh ( beacsuse we made some changes )
+save ctrl and o PRESS ENTER THEN EXIT CTRL AND X 
+NOW RUN ./start_tunnel.sh
 
