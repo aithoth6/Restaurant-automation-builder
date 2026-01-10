@@ -82,3 +82,14 @@ run pkg install termux-api -y
 run termux-setup-storage
 run termux-wake-lock
 run pkg update && pkg upgrade -y && pkg install python git nano openssh termux-api -y && pip install flask
+
+
+
+
+
+run home command cd ~
+opening one hidden file to store token nano .bashrc
+store your file export PINGGY_TOKEN="PASTE_YOUR_ACTUAL_TOKEN_HERE"
+refresh source .bashrc
+confirm echo $PINGGY_TOKEN
+
