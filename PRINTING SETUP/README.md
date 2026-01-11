@@ -101,3 +101,10 @@ NOW RUN ./start_tunnel.sh
 
 
 =ARRAYFORMULA(IF(A2:A="",,IF(F2:F<50,(F2:F*SETTINGS!$B$4)+SETTINGS!$B$3,(F2:F*SETTINGS!$B$6)+SETTINGS!$B$5)))
+
+
+Kill everything old: pkill -9 ssh
+
+Clear server memory: rm ~/.ssh/known_hosts
+
+Start fresh: Run your bash start_tunnel.sh
