@@ -98,3 +98,6 @@ nano setup_tunnel.sh ( beacsuse we made some changes )
 save ctrl and o PRESS ENTER THEN EXIT CTRL AND X 
 NOW RUN ./start_tunnel.sh
 
+
+
+=ARRAYFORMULA(IF(A2:A="",,IF(F2:F<50,(F2:F*SETTINGS!$B$4)+SETTINGS!$B$3,(F2:F*SETTINGS!$B$6)+SETTINGS!$B$5)))
