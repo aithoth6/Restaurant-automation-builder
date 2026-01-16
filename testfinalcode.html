@@ -301,13 +301,124 @@ body {
     font-weight: bold;
     margin: 8px 0;
     text-align: center;
+} /* This bracket was missing! */
+
+.ready-summary-section {
+    margin: 20px auto;
+    max-width: 1400px;
+    padding: 0 15px;
 }
+
+.summary-header {
+    background: #10b981;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.summary-content {
+    display: none; /* Collapsed by default */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    padding: 15px 0;
+}
+
+.summary-content.show {
+    display: grid;
+}
+
+.ready-card {
+    background: white;
+    border-left: 8px solid #10b981;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.ready-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.btn-reprint { background: #3b82f6; color: white; border: none; padding: 8px; border-radius: 5px; flex: 1; cursor: pointer; }
+.btn-clear { background: #ef4444; color: white; border: none; padding: 8px; border-radius: 5px; flex: 1; cursor: pointer; }
+
+.clear-all-container {
+    text-align: center;
+    padding: 20px;
+}
+
+.btn-clear-all {
+    background: #374151;
+    color: white;
+    padding: 10px 25px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Fixed CSS Section */
+.kitchen-status-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 12px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+} /* Added this missing bracket */
+
+.kitchen-status-label {
+    font-weight: bold;
+    font-size: 14px;
+    color: white; /* Changed to white to match your header */
+    white-space: nowrap;
+    margin-right: 5px;
+}
+
+.kitchen-status-badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 14px;
+    min-width: 100px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.kitchen-status-badge.open { background: #10b981; color: white; }
+.kitchen-status-badge.closed { background: #ef4444; color: white; }
+
+.status-indicator {
+    font-size: 20px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+</style>
 </style>
 </head>
 <body>
 <div class="header">
     <h1>🍽️ SEVERIN PLUS KITCHEN</h1>
     <div class="controls">
+      <div class="kitchen-status-section">
+            <span class="kitchen-status-label">Status:</span>
+            <div id="statusBtn" class="kitchen-status-badge open" onclick="toggleStatus()">
+                <span class="status-indicator">●</span> OPEN
+            </div>
+        </div>
         <button class="sound-btn" id="soundBtn" onclick="toggleSound()">🔊 ON</button>
         <select class="staff-select" id="staffSelect">
             <option value="">👤 Staff</option>
@@ -320,6 +431,11 @@ body {
             <option value="Tsoekem">Tsoekem</option>
             <option value="Bridget">Bridget</option>
             <option value="Setornam">Setornam</option>
+            <option value="joel">joel</option>
+            <option value="Believe">Believe</option>
+            <option value="Agnes">Agnes</option>
+            <option value="Joycelyn">Joycelyn</option>
+            <option value="Clever">Clever</option>
         </select>
         <button class="sound-btn" onclick="openMenuManager()">🍽️ Menu</button>
     </div>
@@ -369,8 +485,25 @@ body {
     </div>
 </div>
 
+<div class="ready-summary-section">
+    <div class="summary-header" onclick="toggleReadySummary()">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span id="eyeIcon">👁️</span>
+            <span style="font-weight: bold;">READY ORDERS SUMMARY</span>
+            <span class="badge" style="background: white; color: #10b981;" id="readyCount">0</span>
+        </div>
+        <span>(Click to Toggle)</span>
+    </div>
+    <div id="readyOrdersContent" class="summary-content">
+        </div>
+    <div id="clearAllBtnContainer" class="clear-all-container" style="display:none;">
+        <button class="btn-clear-all" onclick="clearAllReady()">🗑️ CLEAR ALL READY ORDERS</button>
+    </div>
+</div>
+
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzO1yMM2F4FpM7RJXGvv3Lj4mvy30fVwnho4I6bQSwWH_N0sjkU1KcNfRIOcdTjyjfC/exec';
+let readyOrdersStorage = [];
 const REFRESH_INTERVAL = 5000;
 let soundEnabled = true;
 let currentOrders = {pending: [], cooking: []};
@@ -576,9 +709,49 @@ async function confirmReady(confirmed) {
     }
 }
 
+async function clearOneReady(orderId) {
+    if(!confirm("Clear this order from summary?")) return;
+    await fetch(`${SCRIPT_URL}?action=clearReady&orderId=${orderId}`);
+    loadReadyOrders(); // Refresh the list
+}
+
+async function reprintOrder(orderId) {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    
+    try {
+        btn.textContent = "⏳ printing...";
+        btn.disabled = true;
+
+        const url = `${SCRIPT_URL}?action=reprint&orderId=${orderId}`;
+
+        // 'no-cors' is the secret key for Google Script Fetch requests
+        await fetch(url, { 
+            mode: 'no-cors' 
+        });
+
+        // Since we can't 'read' the response in no-cors, 
+        // if we reach this line, it means the request was sent.
+        alert("✅ Reprint request sent!");
+        
+    } catch (e) {
+        console.error("Connection failed", e);
+        alert("❌ Network error. Check your connection.");
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
 window.onload = function() {
-    loadOrders();
-    setInterval(loadOrders, REFRESH_INTERVAL);
+    // 1. Initial Load (Runs once immediately when page opens)
+    loadOrders(); 
+    loadReadyOrders(); 
+
+    // 2. Continuous Sync (Runs every 5 seconds)
+    setInterval(() => {
+        loadOrders();
+        loadReadyOrders();
+    }, REFRESH_INTERVAL);
 };
 
 function openMenuManager() {
@@ -589,6 +762,152 @@ function openMenuManager() {
     document.body.appendChild(a);
     a.click();
 }
+// This function matches your NEW action 'getReadyOrders'
+async function loadReadyOrders() {
+    try {
+        // We use the deployment URL + the action name you just created
+        const response = await fetch(SCRIPT_URL + '?action=getReadyOrders');
+        readyOrdersStorage = await response.json();
+        renderReadySummary();
+    } catch (e) { 
+        console.error("Ready load error", e); 
+    }
+}
+
+function toggleReadySummary() {
+    const content = document.getElementById('readyOrdersContent');
+    const eye = document.getElementById('eyeIcon');
+    
+    // Toggle the "show" class we defined in CSS
+    content.classList.toggle('show');
+    
+    // Optional: Rotate the eye icon when open
+    if (content.classList.contains('show')) {
+        eye.style.transform = "rotate(180deg)";
+    } else {
+        eye.style.transform = "rotate(0deg)";
+    }
+}
+
+async function clearAllReady() {
+    if(!confirm("⚠️ Are you sure you want to clear ALL ready orders?")) return;
+    try {
+        const response = await fetch(SCRIPT_URL + '?action=clearAllReady');
+        const result = await response.json();
+        if (result.success) {
+            loadReadyOrders();
+        }
+    } catch (e) {
+        console.error("Clear all error:", e);
+    }
+}
+
+function renderReadySummary() {
+    const container = document.getElementById('readyOrdersContent');
+    const countBadge = document.getElementById('readyCount');
+    
+    // Update the badge count
+    countBadge.textContent = readyOrdersStorage.length;
+
+    // Show/Hide the "Clear All" button based on if there are orders
+    const clearBtn = document.getElementById('clearAllBtnContainer');
+    if (clearBtn) clearBtn.style.display = readyOrdersStorage.length > 0 ? 'block' : 'none';
+
+    if (readyOrdersStorage.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#666; padding: 20px;">No ready orders.</p>';
+        return;
+    }
+
+    // Map the data to HTML cards
+    container.innerHTML = readyOrdersStorage.map(order => {
+        // Create the combined Delivery string
+        const deliveryInfo = order.deliveryOption === 'Pickup' 
+            ? '📍 Pickup' 
+            : `🚗 ${order.deliveryOption} - ${order.deliveryZone}`;
+
+        return `
+        <div class="ready-card" style="border-left: 5px solid #10b981; background: #fff; padding: 12px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="font-weight:bold; font-size: 1.1em;">#${order.orderId} - ${order.customerName}</div>
+                <div style="font-size:0.85em; color:#666;">Ready: ${order.readyAt}</div>
+            </div>
+            
+            <div style="margin: 8px 0; font-weight: 600; color: #374151;">
+                ${deliveryInfo}
+            </div>
+
+            <div style="font-size: 0.9em; color: #4b5563; margin-bottom: 5px;">
+                📞 ${order.phone} | 💰 GHS ${order.amount}
+            </div>
+
+            <div style="background: #f9fafb; padding: 8px; border-radius: 4px; margin: 8px 0; border: 1px solid #edf2f7;">
+                ${order.items}
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top: 10px;">
+                <button onclick="reprintOrder('${order.orderId}')" style="flex:1; background:#3b82f6; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">🖨️ Reprint</button>
+                <button onclick="clearOneReady('${order.orderId}')" style="flex:1; background:#ef4444; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">🗑️ Clear</button>
+            </div>
+        </div>
+        `;
+    }).join('');
+    }
+
+// --- UNIFIED LOAD & STATUS LOGIC ---
+
+// 1. Kitchen Status Functions
+async function toggleStatus() {
+    const btn = document.getElementById('statusBtn');
+    const isCurrentlyOpen = btn.classList.contains('open');
+    const nextStatus = isCurrentlyOpen ? "CLOSED" : "OPEN";
+
+    if (!confirm(`Are you sure you want to ${nextStatus} the kitchen?`)) return;
+
+    try {
+        btn.style.opacity = "0.5";
+        const response = await fetch(`${SCRIPT_URL}?action=toggleStatus&status=${nextStatus}`);
+        const result = await response.json();
+        if (result.success) {
+            updateStatusUI(result.status);
+        }
+    } catch (e) {
+        alert("Connection error: Could not update kitchen status.");
+    } finally {
+        btn.style.opacity = "1";
+    }
+}
+
+function updateStatusUI(status) {
+    const btn = document.getElementById('statusBtn');
+    if (!btn) return;
+    if (status === "OPEN") {
+        btn.innerHTML = '<span class="status-indicator">●</span> OPEN';
+        btn.className = "kitchen-status-badge open";
+    } else {
+        btn.innerHTML = '<span class="status-indicator">●</span> CLOSED';
+        btn.className = "kitchen-status-badge closed";
+    }
+}
+
+// 2. The ONE AND ONLY Window Onload
+window.onload = function() {
+    // Initial data load
+    loadOrders(); 
+    loadReadyOrders(); 
+    
+    // Fetch Kitchen Status from Sheets
+    fetch(`${SCRIPT_URL}?action=getStatus`)
+        .then(res => res.json())
+        .then(data => updateStatusUI(data.status))
+        .catch(e => console.error("Init status failed", e));
+
+    // Start the 5-second background refresh
+    setInterval(() => {
+        loadOrders();
+        loadReadyOrders();
+    }, REFRESH_INTERVAL);
+};
+
 </script>
 </body>
 </html>
